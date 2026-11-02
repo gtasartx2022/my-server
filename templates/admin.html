@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Панель управления</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;background:#f0f2f5;min-height:100vh}
+  input,textarea{width:100%;padding:10px 14px;border:1px solid #ddd;
+    border-radius:6px;font-size:14px;font-family:Arial,sans-serif}
+  /* ── Логин ── */
+  .login-wrap{display:flex;justify-content:center;align-items:center;min-height:100vh}
+  .login-box{background:#fff;padding:40px;border-radius:8px;
+    box-shadow:0 2px 10px rgba(0,0,0,.1);width:320px}
+  .login-box h1{margin-bottom:20px;font-size:20px;color:#333}
+  .login-box input{margin-bottom:12px}
+  .btn-login{width:100%;padding:11px;background:#2196F3;color:#fff;
+    border:none;border-radius:6px;font-size:14px;font-weight:bold;cursor:pointer}
+  .btn-login:hover{background:#1976D2}
+  .error{color:#f44336;font-size:13px;margin-bottom:10px}
+  /* ── Шапка ── */
+  .header{background:#2c3e50;color:#fff;padding:14px 24px;
+    display:flex;justify-content:space-between;align-items:center}
+  .header h1{font-size:17px}
+  .header button{background:transparent;color:#fff;
+    border:1px solid rgba(255,255,255,.4);padding:6px 16px;
+    border-radius:4px;cursor:pointer}
+  /* ── Контент ── */
+  .wrap{max-width:760px;margin:0 auto;padding:24px}
+  .card{background:#fff;border-radius:8px;padding:22px;
+    margin-bottom:22px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+  .card h2{margin-bottom:16px;font-size:15px;color:#444}
+  textarea{resize:vertical;min-height:80px;margin-bottom:14px}
+  /* ── Кнопки в форме ── */
+  .btn-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+  .btn-row input{margin:0;flex:1}
+  .rm{background:none;border:none;color:#f44336;font-size:20px;
+    cursor:pointer;padding:0 4px;line-height:1}
+  .add-btn{background:none;border:1px dashed #aaa;color:#666;
+    padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;margin-bottom:14px}
+  .add-btn:hover{border-color:#4CAF50;color:#4CAF50}
+  .send-btn{width:100%;padding:12px;background:#4CAF50;color:#fff;
+    border:none;border-radius:6px;font-size:14px;font-weight:bold;cursor:pointer}
+  .send-btn:hover{background:#43a047}
+  /* ── История ── */
+  .msg{border:1px solid #eee;border-radius:8px;padding:14px;
+    margin-bottom:10px;position:relative}
+  .msg.pending{border-left:4px solid #FF9800}
+  .msg.sent   {border-left:4px solid #2196F3}
+  .msg.answered{border-left:4px solid #4CAF50}
+  .msg-text{font-size:14px;color:#222;margin-bottom:8px;padding-right:40px}
+  .tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+  .tag{background:#e3f2fd;color:#1565C0;padding:2px 10px;
+    border-radius:12px;font-size:12px}
+  .meta{font-size:11px;color:#aaa}
+  .reply{margin-top:8px;padding:8px 12px;background:#f1f8e9;
+    border-radius:6px;font-size:13px;color:#2e7d32}
+  .del-btn{position:absolute;top:10px;right:10px;background:#ffebee;
+    border:none;color:#f44336;border-radius:4px;padding:3px 8px;
+    cursor:pointer;font-size:12px}
+  .del-btn:hover{background:#f44336;color:#fff}
+  .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px}
+  .b-pending {background:#fff3e0;color:#e65100}
+  .b-sent    {background:#e3f2fd;color:#0d47a1}
+  .b-answered{background:#e8f5e9;color:#1b5e20}
+  .empty{text-align:center;color:#aaa;padding:24px}
+</style>
+</head>
+<body>
+
+{% if not logged_in %}
+<div class="login-wrap">
+  <div class="login-box">
+    <h1>🔐 Вход</h1>
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    <form method="POST">
+      <input type="hidden" name="action" value="login">
+      <input type="password" name="password" placeholder="Пароль" autofocus>
+      <br><br>
+      <button class="btn-login">Войти</button>
+    </form>
+  </div>
+</div>
+
+{% else %}
+<div class="header">
+  <h1>📨 Панель управления</h1>
+  <form method="POST">
+    <input type="hidden" name="action" value="logout">
+    <button>Выйти</button>
+  </form>
+</div>
+
+<div class="wrap">
+
+  <!-- Форма отправки -->
+  <div class="card">
+    <h2>Новое сообщение</h2>
+    <form method="POST">
+      <input type="hidden" name="action" value="send">
+      <textarea name="text" placeholder="Введи сообщение..." required></textarea>
+      <div style="font-size:13px;color:#666;margin-bottom:8px">Кнопки:</div>
+      <div id="btnList">
+        <div class="btn-row">
+          <input type="text" name="btn[]" value="ОК" placeholder="Текст кнопки">
+        </div>
+      </div>
+      <button type="button" class="add-btn" onclick="addBtn()">+ Добавить кнопку</button>
+      <button type="submit" class="send-btn">📤 Отправить</button>
+    </form>
+  </div>
+
+  <!-- История -->
+  <div class="card">
+    <h2>История</h2>
+    {% if not messages %}
+      <div class="empty">Сообщений ещё нет</div>
+    {% endif %}
+    {% for m in messages %}
+    <div class="msg {{ m.status }}">
+      <div class="msg-text">{{ m.text }}</div>
+      <div class="tags">
+        {% for b in m.buttons_list %}
+          <span class="tag">{{ b }}</span>
+        {% endfor %}
+      </div>
+      <div class="meta">
+        <span class="badge b-{{ m.status }}">
+          {% if m.status=='pending' %}⏳ Ожидает
+          {% elif m.status=='sent' %}📤 Доставлено
+          {% else %}✅ Отвечено{% endif %}
+        </span>
+        &nbsp;·&nbsp; {{ m.created_at }}
+      </div>
+      {% if m.button_clicked %}
+      <div class="reply">↩️ Нажал: <strong>{{ m.button_clicked }}</strong> · {{ m.resp_time }}</div>
+      {% endif %}
+      <form method="POST" onsubmit="return confirm('Удалить?')">
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="msg_id" value="{{ m.id }}">
+        <button class="del-btn" type="submit">✕</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+<script>
+function addBtn(){
+  const list=document.getElementById('btnList');
+  const row=document.createElement('div');
+  row.className='btn-row';
+  row.innerHTML=`<input type="text" name="btn[]" placeholder="Текст кнопки">
+    <button type="button" class="rm" onclick="this.parentElement.remove()">×</button>`;
+  list.appendChild(row);
+  row.querySelector('input').focus();
+}
+</script>
+{% endif %}
+</body>
+</html>
